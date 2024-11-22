@@ -41,6 +41,8 @@ pub enum Action {
     ListUsers,
     /// Get the snapshot of the entire filesystem.
     GetFilesystemTimeline,
+    /// Get the snapshot of a raw filesystem using Sleuthkit.
+    GetFilesystemTimelineTsk,
     // Get a value from the Windows Registry (Windows-only).
     GetWinregValue,
     /// List values of the Windows Registry key (Windows-only).
@@ -68,6 +70,7 @@ impl std::fmt::Display for Action {
             Action::ListMounts => write!(fmt, "list_mounts"),
             Action::ListUsers => write!(fmt, "list_users"),
             Action::GetFilesystemTimeline => write!(fmt, "get_filesystem_timeline"),
+            Action::GetFilesystemTimelineTsk => write!(fmt, "get_filesystem_timeline_tsk"),
             Action::GetWinregValue => write!(fmt, "get_winreg_value"),
             Action::ListWinregValues => write!(fmt, "list_winreg_values"),
             Action::ListWinregKeys => write!(fmt, "list_winreg_keys"),
