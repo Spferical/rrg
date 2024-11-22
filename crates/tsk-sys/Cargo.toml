@@ -1,0 +1,9 @@
+[package]
+name = "tsk-sys"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+
+[build-dependencies]
+bindgen = "0.70.1"
+cc = "1.2.1"
