@@ -11,7 +11,6 @@ fn main() {
         .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
         .derive_debug(true)
         .derive_default(true)
-        .allowlist_function("tsk_version_get_str")
         .generate()
         .expect("Unable to generate bindings");
 
