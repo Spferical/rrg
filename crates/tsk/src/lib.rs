@@ -1,6 +1,8 @@
 use std::ptr::NonNull;
 use std::{ffi::CStr, path::Path};
 
+use tsk_sys::TSK_FS_TYPE_ENUM_TSK_FS_TYPE_DETECT;
+
 pub fn get_tsk_version() -> String {
     let cstr = unsafe { CStr::from_ptr(tsk_sys::tsk_version_get_str()) };
     String::from_utf8_lossy(cstr.to_bytes()).to_string()
@@ -66,7 +68,7 @@ fn get_tsk_result<T>(result: *mut T) -> Result<NonNull<T>, TskError> {
 }
 
 pub struct TskImage {
-    pub inner: NonNull<tsk_sys::TSK_IMG_INFO>,
+    pub(crate) inner: NonNull<tsk_sys::TSK_IMG_INFO>,
 }
 
 impl TskImage {
@@ -80,6 +82,27 @@ impl TskImage {
             )
         };
         get_tsk_result(tsk_img_result).map(|inner| Self { inner })
+    }
+
+    pub fn open_fs(&mut self) -> TskResult<TskFs> {
+        let tsk_fs_result = unsafe {
+            tsk_sys::tsk_fs_open_img(self.inner.as_mut(), 0, TSK_FS_TYPE_ENUM_TSK_FS_TYPE_DETECT)
+        };
+        get_tsk_result(tsk_fs_result).map(|inner| TskFs { inner })
+    }
+}
+
+pub struct TskFs {
+    pub(crate) inner: NonNull<tsk_sys::TSK_FS_INFO>,
+}
+
+impl TskFs {
+    pub fn get_fs_type(&self) -> TskResult<String> {
+        let ty = unsafe { (*self.inner.as_ptr()).ftype };
+        let name_ptr = unsafe { tsk_sys::tsk_fs_type_toname(ty) };
+        get_tsk_result(name_ptr as _)
+            .map(|non_null| unsafe { CStr::from_ptr(non_null.as_ptr()).to_bytes() })
+            .map(|bytes| String::from_utf8_lossy(bytes).to_string())
     }
 }
 
@@ -106,6 +129,8 @@ mod test {
             .expect("Failed to read test data");
         let mut tempfile = NamedTempFile::new().expect("Failed to open tempfile");
         tempfile.write(&ntfs_raw).expect("Failed to write tempfile");
-        TskImage::open(tempfile.path()).expect("Failed to open ntfs");
+        let mut image = TskImage::open(tempfile.path()).expect("Failed to open ntfs image");
+        let fs = image.open_fs().expect("Failed to open NTFS FS");
+        eprintln!("{}", fs.get_fs_type().expect("Failed to get NTFS FS type"));
     }
 }
