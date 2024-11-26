@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use std::ptr::NonNull;
 use std::{ffi::CStr, path::Path};
 
@@ -88,15 +89,25 @@ impl TskImage {
         let tsk_fs_result = unsafe {
             tsk_sys::tsk_fs_open_img(self.inner.as_mut(), 0, TSK_FS_TYPE_ENUM_TSK_FS_TYPE_DETECT)
         };
-        get_tsk_result(tsk_fs_result).map(|inner| TskFs { inner })
+        get_tsk_result(tsk_fs_result).map(|inner| TskFs {
+            inner,
+            _marker: PhantomData,
+        })
     }
 }
 
-pub struct TskFs {
-    pub(crate) inner: NonNull<tsk_sys::TSK_FS_INFO>,
+impl Drop for TskImage {
+    fn drop(&mut self) {
+        unsafe { tsk_sys::tsk_img_close(self.inner.as_mut()) };
+    }
 }
 
-impl TskFs {
+pub struct TskFs<'image> {
+    pub(crate) inner: NonNull<tsk_sys::TSK_FS_INFO>,
+    _marker: PhantomData<&'image TskImage>,
+}
+
+impl<'image> TskFs<'image> {
     pub fn get_fs_type(&self) -> TskResult<String> {
         let ty = unsafe { (*self.inner.as_ptr()).ftype };
         let name_ptr = unsafe { tsk_sys::tsk_fs_type_toname(ty) };
@@ -104,7 +115,18 @@ impl TskFs {
             .map(|non_null| unsafe { CStr::from_ptr(non_null.as_ptr()).to_bytes() })
             .map(|bytes| String::from_utf8_lossy(bytes).to_string())
     }
+
+    pub fn open_dir(path: &Path) -> TskResult<TskFsDir> {
+    }
 }
+
+impl<'image> Drop for TskFs<'image> {
+    fn drop(&mut self) {
+        unsafe { tsk_sys::tsk_fs_close(self.inner.as_mut()) };
+    }
+}
+
+pub struct TskFsDir {}
 
 #[cfg(test)]
 mod test {
